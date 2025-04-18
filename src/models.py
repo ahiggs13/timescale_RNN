@@ -24,10 +24,10 @@ class RNN(nn.Module):
         self.ho = nn.Linear(hidden_size, output_size, bias=bias)
 
     def forward(self, inputs, hidden, noise=True):
-        # input_noise = torch.tensor(self.sigma_in) * torch.randn_like(inputs)
-        # if not noise:
-        #     input_noise = torch.zeros_like(inputs)
-        # inputs = inputs + input_noise
+        input_noise = torch.tensor(self.sigma_in) * torch.randn_like(inputs)
+        if not noise:
+            input_noise = torch.zeros_like(inputs)
+        inputs = inputs + input_noise
 
         re_noise = torch.tensor(self.sigma_re) * torch.randn_like(hidden)
         if not noise:
