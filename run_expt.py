@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, random_split
 import torch.optim as optim
-matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 import yaml
 import fire 
 
