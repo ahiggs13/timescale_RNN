@@ -1,6 +1,6 @@
 import torch 
 
-def train_RNN(model, dataloader, validationloader, optimizer, loss_fxn, config, device, seed):
+def train_RNN(model, dataloader, validationloader, optimizer, loss_fxn, config, device, seed, savepath):
     
     min_loss = float('inf')
     val_losses = []
@@ -17,7 +17,7 @@ def train_RNN(model, dataloader, validationloader, optimizer, loss_fxn, config, 
 
             # Process inputs one timestep at a time to avoid large batch issues
             for t in range(inputs.size(1)):
-                input_t = inputs[:, t].unsqueeze(1)  # Ensure input_t has the correct shape
+                input_t = inputs[:, t].unsqueeze(1)  # slow, would be better if all at once
                 hidden, output = model(input_t, hidden)
                 outputs.append(output)
 
@@ -42,7 +42,6 @@ def train_RNN(model, dataloader, validationloader, optimizer, loss_fxn, config, 
                     hidden, output = model(input_t, hidden)
                     val_outputs.append(output)
 
-
                 val_outputs = torch.cat(val_outputs, dim=1)
                 val_loss += loss_fxn(val_outputs, val_targets).item()
 
@@ -52,7 +51,7 @@ def train_RNN(model, dataloader, validationloader, optimizer, loss_fxn, config, 
         # Save the model if validation loss improves
         if val_loss < min_loss:
             min_loss = val_loss
-            torch.save(model.state_dict(), str(seed) + '_' + config['training']['save_path'])
+            torch.save(model.state_dict(), savepath + config['training']['save_path'])
             print(f"Model saved with improvement at epoch {epoch+1} with loss {min_loss}.")
 
         if val_loss <= config['training']['early_stopping_loss']:

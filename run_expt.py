@@ -9,12 +9,19 @@ import fire
 
 from src import analysis, datasets, models, trainer
 
-def main(config, seed):
+def main(config, seed, name):
     with open(config, 'r') as file:
         conf = yaml.safe_load(file)
     
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     generator = torch.Generator().manual_seed(seed)
+    savepath = name + '_' + str(seed) + '/'
+    if not os.path.isdir(savepath):
+        os.mkdir(savepath)
+    
+    # Save a copy of the configuration file to the savepath directory
+    with open(os.path.join(savepath, 'config.yaml'), 'w') as outfile:
+        yaml.dump(conf, outfile, default_flow_style=False)
 
     print(f'Training with device: {device}')
 
@@ -26,13 +33,13 @@ def main(config, seed):
     trainloader = DataLoader(traindata, batch_size=conf['training']['batch_size'], shuffle=True, num_workers=0)
     valloader = DataLoader(validdata, batch_size=conf['training']['batch_size'], shuffle=True, num_workers=0)
 
-    
+    #Save dataset?
 
     if conf['model']['type'] == 'RNN':
         model = models.RNN(conf['model']['input_size'], conf['model']['hidden_size'], conf['model']['output_size'], conf['model']['dt'], conf['model']['tau'], conf['model']['activation'], conf['model']['bias'], conf['model']['sigma_in'], conf['model']['sigma_re'])
         optimizer = optim.Adam(model.parameters(), lr=conf['training']['learning_rate'])
         loss_fxn = nn.MSELoss()
-        model, val_losses = trainer.train_RNN(model, trainloader, valloader, optimizer, loss_fxn, conf, device, seed)
+        model, val_losses = trainer.train_RNN(model, trainloader, valloader, optimizer, loss_fxn, conf, device, seed, savepath)
     #add other models here
 
     #some plotting here
@@ -43,4 +50,4 @@ if __name__ == '__main__':
 
     
 
-# python run_expt.py --config='configs/vanilla_conf.yaml' --seed=0
+# python run_expt.py --config='configs/vanilla_conf.yaml' --seed=0 --name='vanilla'

@@ -15,7 +15,7 @@ training:
   batch_size: 50
   learning_rate: 0.001
   epocs: 1000
-  save_path: "best_RNN.pth"
+  save_path: 'best_model.pth'
   early_stopping_loss: 0.001
   size: 1000
 
