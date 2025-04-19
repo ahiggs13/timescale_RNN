@@ -15,7 +15,7 @@ def generate_instant_DM(stim, start, s_length, d_length, dt, duration):
 
     return t, I_stim, output
 
-class decisionMakingInstant(Dataset):
+class decisionMakingInstant(Dataset): #this looks for 0 when not output time, should it? Not if we want fixed point...
     def __init__(self, seed, stim_start_min, stim_start_max, stim_length, decision_length, sigma_length=0.01, duration=20.0, dt=0.01, size=1000):
         self.stim_start_min = stim_start_min
         self.stim_start_max = stim_start_max

@@ -25,7 +25,6 @@ class RNN(nn.Module):
         if noise:
             input_noise = torch.tensor(self.sigma_in) * torch.randn_like(inputs)
             inputs = inputs + input_noise
-
             re_noise = torch.tensor(self.sigma_re) * torch.randn_like(hidden)
         else:
             re_noise = torch.zeros_like(hidden)

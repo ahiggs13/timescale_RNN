@@ -19,7 +19,7 @@ def main(config, seed, name):
     if not os.path.isdir(savepath):
         os.mkdir(savepath)
     
-    # Save a copy of the configuration file to the savepath directory
+    # Save a copy of the configuration file to the savepath directory for reproducibility
     with open(os.path.join(savepath, 'config.yaml'), 'w') as outfile:
         yaml.dump(conf, outfile, default_flow_style=False)
 
@@ -39,7 +39,7 @@ def main(config, seed, name):
         model = models.RNN(conf['model']['input_size'], conf['model']['hidden_size'], conf['model']['output_size'], conf['model']['dt'], conf['model']['tau'], conf['model']['activation'], conf['model']['bias'], conf['model']['sigma_in'], conf['model']['sigma_re'])
         optimizer = optim.Adam(model.parameters(), lr=conf['training']['learning_rate'])
         loss_fxn = nn.MSELoss()
-        model, val_losses = trainer.train_RNN(model, trainloader, valloader, optimizer, loss_fxn, conf, device, seed, savepath)
+        model, val_losses = trainer.train_RNN(model, trainloader, valloader, optimizer, loss_fxn, conf, device, generator, savepath)
     #add other models here
 
     #some plotting here
@@ -50,5 +50,5 @@ if __name__ == '__main__':
     fire.Fire(main)
 
     
-
-# python run_expt.py --config='configs/test_conf.yaml' --seed=0 --name='test'
+##########################
+### python run_expt.py --config='configs/test_conf.yaml' --seed=0 --name='test'

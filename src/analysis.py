@@ -1,4 +1,3 @@
-#Plotting for run_expt..
 import os
 import numpy as np
 import matplotlib.pyplot as plt
@@ -19,7 +18,7 @@ def plot_example(model, batch, device, generator, savepath):
 
         for t in range(inputs.size(1)):
             input_t = inputs[:, t].unsqueeze(1)  # slow, would be better if all at once
-            hidden, output = model(input_t, hidden)
+            hidden, output = model(input_t, hidden, noise=False)
             outputs.append(output)
 
         outputs = torch.cat(outputs, dim=1)
