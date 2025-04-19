@@ -12,15 +12,16 @@ def train_RNN(model, dataloader, validationloader, optimizer, loss_fxn, config, 
         for inputs, targets in dataloader:
             inputs, targets = inputs.to(device), targets.to(device)
             batch_size = inputs.size(0)
-            hidden = torch.rand(model.hidden_size, generator=generator).to(device)
+            hidden = torch.rand((batch_size, model.hidden_size), generator=generator).to(device)
             outputs = []
 
-            for t in range(inputs.size(1)): #inefficient, equinox way was way faster
-                input_t = inputs[:, t, :]
-                hidden = model(input_t, hidden)
-                outputs.append(model.ho(model.activation(hidden)))
+            # Process inputs one timestep at a time to avoid large batch issues
+            for t in range(inputs.size(1)):
+                input_t = inputs[:, t].unsqueeze(1)  # Ensure input_t has the correct shape
+                hidden, output = model(input_t, hidden)
+                outputs.append(output)
 
-            outputs = torch.stack(outputs, dim=1)
+            outputs = torch.cat(outputs, dim=1)  # Concatenate outputs along the time dimension
             loss = loss_fxn(outputs, targets)
             loss.backward()
             optimizer.step()
@@ -33,15 +34,16 @@ def train_RNN(model, dataloader, validationloader, optimizer, loss_fxn, config, 
             for val_inputs, val_targets in validationloader:
                 val_inputs, val_targets = val_inputs.to(device), val_targets.to(device)
                 batch_size = val_inputs.size(0)
-                hidden = torch.rand(model.hidden_size, generator=generator).to(device)
+                hidden = torch.rand((batch_size, model.hidden_size), generator=generator).to(device)
                 val_outputs = []
 
                 for t in range(val_inputs.size(1)):
-                    input_t = val_inputs[:, t, :]
-                    hidden = model(input_t, hidden)
-                    val_outputs.append(hidden)
+                    input_t = val_inputs[:, t].unsqueeze(1)
+                    hidden, output = model(input_t, hidden)
+                    val_outputs.append(output)
 
-                val_outputs = torch.stack(val_outputs, dim=1)
+
+                val_outputs = torch.cat(val_outputs, dim=1)
                 val_loss += loss_fxn(val_outputs, val_targets).item()
 
         val_loss /= len(validationloader)

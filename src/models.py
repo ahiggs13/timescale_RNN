@@ -34,5 +34,8 @@ class RNN(nn.Module):
         dh = -hidden + self.hh(r) + self.ih(inputs) + re_noise
         hidden = hidden + (self.dt / self.tau) * dh
 
-        return hidden
+        output = self.ho(self.activation(hidden))
+
+        return hidden, output
+
 

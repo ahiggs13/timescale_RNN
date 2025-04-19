@@ -18,7 +18,7 @@ def main(config, seed):
 
     print(f'Training with device: {device}')
 
-    if conf['expt']['data'] == 'instant_DM':
+    if conf['expt']['type'] == 'instant_DM':
         alldata = datasets.decisionMakingInstant(seed, conf['expt']['stim_start_min'], conf['expt']['stim_start_max'], conf['expt']['stim_length'], conf['expt']['decision_length'], conf['expt']['sigma_length'], conf['expt']['duration'], conf['model']['dt'], conf['training']['size'])
     #put other datasets here 
 
@@ -26,11 +26,12 @@ def main(config, seed):
     trainloader = DataLoader(traindata, batch_size=conf['training']['batch_size'], shuffle=True, num_workers=0)
     valloader = DataLoader(validdata, batch_size=conf['training']['batch_size'], shuffle=True, num_workers=0)
 
-    optimizer = optim.Adam(model.parameters(), lr=conf['training']['learning_rate'])
-    loss_fxn = nn.MSELoss()
+    
 
     if conf['model']['type'] == 'RNN':
         model = models.RNN(conf['model']['input_size'], conf['model']['hidden_size'], conf['model']['output_size'], conf['model']['dt'], conf['model']['tau'], conf['model']['activation'], conf['model']['bias'], conf['model']['sigma_in'], conf['model']['sigma_re'])
+        optimizer = optim.Adam(model.parameters(), lr=conf['training']['learning_rate'])
+        loss_fxn = nn.MSELoss()
         model, val_losses = trainer.train_RNN(model, trainloader, valloader, optimizer, loss_fxn, conf, device, seed)
     #add other models here
 
@@ -42,4 +43,4 @@ if __name__ == '__main__':
 
     
 
-    
+# python run_expt.py --config='configs/vanilla_conf.yaml' --seed=0
