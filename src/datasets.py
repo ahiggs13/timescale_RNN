@@ -47,7 +47,7 @@ class decisionMakingInstant(Dataset):
         _, I_stim, output = generate_instant_DM(stim, start, s_length, d_length, self.dt, self.duration)
 
         input = torch.tensor(I_stim, dtype=torch.float32)
-        output = torch.tensor(I_stim, dtype=torch.float32)
+        output = torch.tensor(output, dtype=torch.float32)
 
         return input, output
 

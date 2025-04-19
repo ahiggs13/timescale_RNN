@@ -43,11 +43,12 @@ def main(config, seed, name):
     #add other models here
 
     #some plotting here
-
+    plotting_data = next(iter(DataLoader(validdata, batch_size=10, shuffle=True, num_workers=0)))
+    analysis.plot_example(model, plotting_data, device, generator, savepath)
 
 if __name__ == '__main__':
     fire.Fire(main)
 
     
 
-# python run_expt.py --config='configs/vanilla_conf.yaml' --seed=0 --name='vanilla'
+# python run_expt.py --config='configs/test_conf.yaml' --seed=0 --name='test'
