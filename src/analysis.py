@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import torch
 
-def plot_example(model, batch, device, generator, savepath):
+def plot_example(model, batch, device, generator, savepath, noise=False):
     """
     Plot an example input-output pair from the dataset
     """
@@ -13,12 +13,12 @@ def plot_example(model, batch, device, generator, savepath):
         inputs, targets = batch
         inputs, targets = inputs.to(device), targets.to(device)
         batch_size = inputs.size(0)
-        hidden = torch.rand((batch_size, model.hidden_size), generator=generator).to(device)
+        hidden = torch.zeros((batch_size, model.hidden_size), device=device)
         outputs = []
 
         for t in range(inputs.size(1)):
             input_t = inputs[:, t].unsqueeze(1)  # slow, would be better if all at once
-            hidden, output = model(input_t, hidden, noise=False)
+            hidden, output = model(input_t, hidden, noise=noise)
             outputs.append(output)
 
         outputs = torch.cat(outputs, dim=1)

@@ -11,7 +11,7 @@ def train_RNN(model, dataloader, validationloader, optimizer, loss_fxn, config, 
         for inputs, targets in dataloader:
             inputs, targets = inputs.to(device), targets.to(device)
             batch_size = inputs.size(0)
-            hidden = torch.zeros((batch_size, model.hidden_size), device=device)
+            hidden = model.init_hidden(batch_size).to(device)  # Initialize hidden state
             outputs = []
 
             optimizer.zero_grad()
@@ -35,7 +35,7 @@ def train_RNN(model, dataloader, validationloader, optimizer, loss_fxn, config, 
             for val_inputs, val_targets in validationloader:
                 val_inputs, val_targets = val_inputs.to(device), val_targets.to(device)
                 batch_size = val_inputs.size(0)
-                hidden = torch.zeros((batch_size, model.hidden_size), device=device)
+                hidden = model.init_hidden(batch_size).to(device)  # Initialize hidden state
                 val_outputs = []
 
                 for t in range(val_inputs.size(1)):

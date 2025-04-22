@@ -27,6 +27,8 @@ def main(config, seed, name):
 
     if conf['expt']['type'] == 'instant_DM':
         alldata = datasets.decisionMakingInstant(seed, conf['expt']['stim_start_min'], conf['expt']['stim_start_max'], conf['expt']['stim_length'], conf['expt']['decision_length'], conf['expt']['sigma_length'], conf['expt']['duration'], conf['model']['dt'], conf['training']['size'])
+    elif conf['expt']['type'] == 'hold_DM':
+        alldata = datasets.decisionMakingHold(seed, conf['expt']['stim_start_min'], conf['expt']['stim_start_max'], conf['expt']['stim_length'], conf['expt']['sigma_length'], conf['expt']['duration'], conf['model']['dt'], conf['training']['size'])
     #put other datasets here 
 
     traindata, validdata = random_split(alldata, conf['training']['valid_split'], generator=generator)
@@ -40,11 +42,16 @@ def main(config, seed, name):
         optimizer = optim.Adam(model.parameters(), lr=conf['training']['learning_rate'])
         loss_fxn = nn.MSELoss()
         model, val_losses = trainer.train_RNN(model, trainloader, valloader, optimizer, loss_fxn, conf, device, generator, savepath)
+    if conf['model']['type'] == 'EI_RNN':
+        model = models.EI_RNN(conf['model']['input_size'], conf['model']['hidden_size'], conf['model']['output_size'], conf['model']['dt'], conf['model']['tau'], conf['model']['activation'], conf['model']['bias'], conf['model']['sigma_in'], conf['model']['sigma_re'], conf['model']['eprop'])
+        optimizer = optim.Adam(model.parameters(), lr=conf['training']['learning_rate'])
+        loss_fxn = nn.MSELoss()
+        model, val_losses = trainer.train_RNN(model, trainloader, valloader, optimizer, loss_fxn, conf, device, generator, savepath)
     #add other models here
 
     #some plotting here
     plotting_data = next(iter(DataLoader(validdata, batch_size=10, shuffle=True, num_workers=0)))
-    analysis.plot_example(model, plotting_data, device, generator, savepath)
+    analysis.plot_example(model, plotting_data, device, generator, savepath, noise=False)
 
 if __name__ == '__main__':
     fire.Fire(main)

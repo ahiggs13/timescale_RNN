@@ -1,5 +1,5 @@
 model:
-  type: 'RNN'
+  type: 'EI_RNN'
   input_size: 1
   hidden_size: 100
   output_size: 1
@@ -9,6 +9,7 @@ model:
   bias: True
   sigma_in: 0.01
   sigma_re: 0.01
+  eprop: 0.8
 
 training:
   valid_split: [0.85, 0.15]
