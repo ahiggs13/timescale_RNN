@@ -1,17 +1,18 @@
 expt:
-  coh_radius: 0.15
-  duration: 20
-  num_cohs: 5
-  stim_start_max: 5
+  type: 'delay_DM'
   stim_start_min: 2
-  symmetric: false
-  type: PC
+  stim_start_max: 6
+  delay_length: 10
+  stim_length: 0.5
+  sigma_length: 0.1
+  sigma_delay: 0
+  duration: 40
 model:
   activation: relu
   bias: true
   dt: 0.01
   hidden_size: 100
-  input_size: 2
+  input_size: 1
   output_size: 1
   sigma_in: 0.01
   sigma_re: 0.01

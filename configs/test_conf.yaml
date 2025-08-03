@@ -14,7 +14,7 @@ training:
   valid_split: [0.85, 0.15]
   batch_size: 50
   learning_rate: 0.001
-  epocs: 1000
+  epochs: 1000
   save_path: 'best_model.pth'
   early_stopping_loss: 0.02
   size: 1000
