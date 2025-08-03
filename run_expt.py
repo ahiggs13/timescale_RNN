@@ -35,6 +35,8 @@ def main(config, seed, name):
         alldata = datasets.decisionMakingDelay(seed, conf['expt']['stim_start_min'], conf['expt']['stim_start_max'], conf['expt']['stim_length'], conf['expt']['delay_length'], conf['expt']['sigma_length'], conf['expt']['sigma_delay'], conf['expt']['duration'], conf['model']['dt'], conf['training']['size'])    
     elif conf['expt']['type'] == 'PC':
         alldata = datasets.perceptualClassification(seed, conf['expt']['num_cohs'], conf['expt']['stim_start_min'], conf['expt']['stim_start_max'], conf['expt']['coh_radius'], conf['expt']['symmetric'], conf['expt']['duration'], conf['model']['dt'], conf['training']['size'])
+    elif conf['expt']['type'] == 'review_task':
+        alldata = datasets.reviewTask(seed, conf['expt']['num_values'], conf['expt']['stim_start_min'], conf['expt']['stim_start_max'], conf['expt']['stim_length'], conf['expt']['value_min'], conf['expt']['value_max'], conf['expt']['delay'], conf['expt']['delay_sigma'], conf['expt']['stim_sigma'], conf['expt']['duration'], conf['model']['dt'], conf['training']['size'])
     #put other datasets here 
 
     traindata, validdata = random_split(alldata, conf['training']['valid_split'], generator=generator)
@@ -63,6 +65,19 @@ def main(config, seed, name):
             for i, tau in enumerate(conf['model']['tau_groups']):
                 tau_array[tauindices[i]:tauindices[i+1]] = tau
         model = models.MultiTauRNN(conf['model']['input_size'], conf['model']['hidden_size'], conf['model']['output_size'], conf['model']['dt'], tau_array, conf['model']['activation'], conf['model']['bias'], conf['model']['sigma_in'], conf['model']['sigma_re'])
+        optimizer = optim.Adam(model.parameters(), lr=conf['training']['learning_rate'])
+        loss_fxn = nn.MSELoss()
+        model, val_losses, losses = trainer.train_RNN(model, trainloader, valloader, optimizer, loss_fxn, conf, device, generator, savepath)
+    if conf['model']['type'] == 'expirimental_RNN':
+        if conf['model']['tau_distribution'] == 'groups':
+            tau_array = torch.zeros(conf['model']['hidden_size'], dtype=torch.float32, device=device)
+            tausizes = [int(p * conf['model']['hidden_size']) for p in conf['model']['tau_proportions']]
+            tauindices = [0] + list(accumulate(tausizes))
+            if tauindices[-1] != conf['model']['hidden_size']:
+                tauindices[-1] = conf['model']['hidden_size']
+            for i, tau in enumerate(conf['model']['tau_groups']):
+                tau_array[tauindices[i]:tauindices[i+1]] = tau
+        model = models.expirimental_RNN(conf['model']['input_size'], conf['model']['hidden_size'], conf['model']['output_size'], conf['model']['dt'], tau_array, conf['model']['activation'], conf['model']['tau_effect'], conf['model']['bias'], conf['model']['sigma_in'], conf['model']['sigma_re'])
         optimizer = optim.Adam(model.parameters(), lr=conf['training']['learning_rate'])
         loss_fxn = nn.MSELoss()
         model, val_losses, losses = trainer.train_RNN(model, trainloader, valloader, optimizer, loss_fxn, conf, device, generator, savepath)

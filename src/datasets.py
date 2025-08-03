@@ -91,6 +91,25 @@ def generate_perceptual_classification_50_test(start, symmetric, dt, duration):
 
     return t, I_stim, output
 
+def generate_review_task(values, start, delay, cue, s_length, dt, duration):
+    t = np.arange(0, duration + dt, dt)
+    I_stim = np.zeros((len(t), len(values) + 1))
+    output = np.zeros_like(t)
+    curtime = start
+    target_sum = 0
+    for i in range(len(values)):
+        s_bins = np.where((t>=curtime)&(t<(curtime + s_length)))
+        I_stim[s_bins, 0] = values[i]
+        curtime += s_length
+        if cue[i] == 1:
+            target_sum += values[i]
+
+    cue_bins = np.where((t>=curtime + delay))
+    I_stim[cue_bins, 1:] = cue.numpy()
+    output[cue_bins] = target_sum
+
+    return t, I_stim, output
+
 class decisionMakingInstant(Dataset): #this looks for 0 when not output time, should it? Not if we want fixed point...
     def __init__(self, seed, stim_start_min, stim_start_max, stim_length, decision_length, sigma_length=0.01, duration=20.0, dt=0.01, size=1000):
         self.stim_start_min = stim_start_min
@@ -271,6 +290,51 @@ class perceptualClassification_50_test(Dataset):
         return input, output
 
 
+class reviewTask(Dataset):
+    def __init__(self, seed, num_values, stim_start_min, stim_start_max, stim_length, value_min, value_max, delay, delay_sigma, stim_sigma = 0, duration=20.0, dt=0.01, size=1000):
+        self.stim_start_min = stim_start_min
+        self.stim_start_max = stim_start_max
+        self.num_values = num_values
+        self.stim_length = stim_length
+        self.value_min = value_min
+        self.value_max = value_max
+        self.delay = delay
+        self.delay_sigma = delay_sigma
+        self.stim_sigma = stim_sigma
+        self.duration = duration
+        self.dt = dt
+        self.size = size
+        self.rand = np.random.default_rng(seed)
 
+    def __len__(self):
+        return self.size
 
+    def __getitem__(self, idx):
+        # first, randomly choose start times and both stim and decision lengths
+        start = self.rand.uniform(self.stim_start_min, self.stim_start_max, 1)
+        delay = self.rand.normal(self.delay, self.delay_sigma)
+        if self.stim_sigma == 0:
+            s_length = self.stim_length
+            while (start + (self.num_values * s_length) + delay) >= self.duration:
+                start = self.rand.uniform(self.stim_start_min, self.stim_start_max, 1)
+                delay = self.rand.normal(self.delay, self.delay_sigma)
+        else:
+            s_length = self.rand.normal(self.stim_length, self.stim_sigma)
+            while (start + (self.num_values * s_length) + delay) >= self.duration:
+                start = self.rand.uniform(self.stim_start_min, self.stim_start_max, 1)
+                s_length = self.rand.normal(self.stim_length, self.stim_sigma)
+                delay = self.rand.normal(self.delay, self.delay_sigma)
+        
+        #print(starts)
+        values = self.rand.uniform(self.value_min, self.value_max, self.num_values)
+        self.rand.shuffle(values)
 
+        cue = torch.full((self.num_values,), 0.5, dtype=torch.float32)
+        cue = torch.bernoulli(cue).float()
+
+        #print(cohs)
+        _, I_stim, output = generate_review_task(values, start, delay, cue, s_length, self.dt, self.duration)
+        input = torch.tensor(I_stim, dtype=torch.float32)
+        output = torch.tensor(output, dtype=torch.float32)
+
+        return input, output

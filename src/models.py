@@ -166,3 +166,58 @@ class MultiTauRNN(nn.Module):
     def init_hidden(self, batch_size, device=None):
         return torch.zeros(batch_size, self.hidden_size, device=device)
 
+class expirimental_RNN(nn.Module):
+    def __init__(self, input_size, hidden_size, output_size, dt, tau_array, activation, tau_effect, bias=True, sigma_in=0.01, sigma_re=0.01):
+        super(expirimental_RNN, self).__init__()
+        self.hidden_size = hidden_size
+        self.dt = dt
+        self.taus = tau_array
+        self.sigma_in = sigma_in
+        self.sigma_re = sigma_re
+        self.tau_effect = tau_effect
+
+        activations = {'relu': F.relu, 'tanh': F.tanh}
+        self.activation = activations.get(activation.lower(), F.tanh)
+
+        self.ih = nn.Linear(input_size, hidden_size, bias=False)
+        self.hh = nn.Linear(hidden_size, hidden_size, bias=bias)
+        self.ho = nn.Linear(hidden_size, output_size, bias=bias)
+
+    def forward(self, inputs, hidden, noise=True):
+        # inputs: (B, T, input_size)
+        outputs = []
+        B, T, _ = inputs.shape
+
+        for t in range(T):
+            input_t = inputs[:, t, :]  # (B, input_size)
+
+            if noise:
+                input_noise = self.sigma_in * torch.randn_like(input_t)
+                re_noise = self.sigma_re * torch.randn_like(hidden)
+                input_t = input_t * (1 + input_noise)
+            else:
+                re_noise = torch.zeros_like(hidden)
+
+            r = self.activation(hidden)
+            #print(f"Hidden shape: {hidden.shape}, Tau shape: {self.taus.shape}, Input shape: {input_t.shape}")
+            dh_decay = -hidden 
+            dh_recur = self.hh(r) + re_noise
+            dh_input = self.ih(input_t) 
+
+            if self.tau_effect == 'decay':
+                hidden = hidden + self.dt * ((1 / self.taus) * (dh_decay) + dh_recur + dh_input)
+            elif self.tau_effect == 'recur':
+                hidden = hidden + self.dt * ((1 / self.taus) * (dh_recur) + dh_decay + dh_input)
+            elif self.tau_effect == 'input':
+                hidden = hidden + self.dt * ((1 / self.taus) * dh_input + dh_decay + dh_recur)
+            elif self.tau_effect == 'all':
+                hidden = hidden + self.dt * ((1 / self.taus) * (dh_decay + dh_recur + dh_input))
+            
+            output = self.ho(self.activation(hidden))
+            outputs.append(output.unsqueeze(1))  # Keep time dim
+            #print (f"taus: {self.taus}, dt: {self.dt}, dh: {dh}")
+
+        return hidden, torch.cat(outputs, dim=1)  # (B, T, output_size)
+
+    def init_hidden(self, batch_size, device=None):
+        return torch.zeros(batch_size, self.hidden_size, device=device)
