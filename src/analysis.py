@@ -25,7 +25,7 @@ def plot_example(model, batch, device, generator, savepath, returnhidden=False, 
 
         outputs = torch.cat(outputs, dim=1)
         all_hidden = torch.stack(all_hidden)
-        print(f"Outputs shape: {outputs.shape}, Hidden shape: {all_hidden.shape}, Targets shape: {targets.shape}")
+        #print(f"Outputs shape: {outputs.shape}, Hidden shape: {all_hidden.shape}, Targets shape: {targets.shape}")
         outputs = outputs.squeeze(-1).cpu().numpy()
         all_hidden = all_hidden.squeeze(-1).cpu().numpy()
         targets = targets.squeeze(-1).cpu().numpy()

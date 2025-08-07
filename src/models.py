@@ -212,6 +212,8 @@ class expirimental_RNN(nn.Module):
                 hidden = hidden + self.dt * ((1 / self.taus) * dh_input + dh_decay + dh_recur)
             elif self.tau_effect == 'all':
                 hidden = hidden + self.dt * ((1 / self.taus) * (dh_decay + dh_recur + dh_input))
+            elif self.tau_effect == 'recur_decay':
+                hidden = hidden + self.dt * ((1 / self.taus) * (dh_decay + dh_recur) + dh_input)
             
             output = self.ho(self.activation(hidden))
             outputs.append(output.unsqueeze(1))  # Keep time dim
