@@ -8,10 +8,11 @@ import matplotlib.pyplot as plt
 import yaml
 import fire 
 import numpy as np
+from scipy.stats import truncnorm
 
 from src import analysis, datasets, models, trainer
 
-def get_tau_array(distribution, hidden_size,  device, tau_groups=None, tau_proportions=None, tau_min=None, tau_max=None):
+def get_tau_array(distribution, hidden_size,  device, tau_groups=None, tau_proportions=None, tau_min=None, tau_max=None, tau_mean1=None, tau_mean2=None, tau_std1=None, tau_std2=None, tau_change=None):
     if distribution == 'groups':
         tau_array = torch.zeros(hidden_size, dtype=torch.float32, device=device)
         tausizes = [int(p * hidden_size) for p in tau_proportions]
@@ -23,7 +24,32 @@ def get_tau_array(distribution, hidden_size,  device, tau_groups=None, tau_propo
         if tau_min is None or tau_max is None:
             raise ValueError("tau_min and tau_max must be provided for uniform distribution.")
         return torch.FloatTensor(hidden_size).uniform_(tau_min, tau_max).to(device)
-    #elif distribution == 'normal':
+    elif distribution == 'bimodal_normal':
+        tau_array = torch.zeros(hidden_size, dtype=torch.float32, device=device)
+        tausizes = [int(p * hidden_size) for p in tau_proportions]
+        tauindices = [0] + list(accumulate(tausizes))
+        if tau_mean1 < tau_mean2:
+            lesser_mean = tau_mean1
+            greater_mean = tau_mean2
+            lesser_std = tau_std1
+            greater_std = tau_std2
+        else:
+            lesser_mean = tau_mean2
+            greater_mean = tau_mean1
+            lesser_std = tau_std2
+            greater_std = tau_std1
+        #normal1
+        a1 = (tau_min - lesser_mean) / lesser_std
+        b1 = (tau_change - lesser_mean) / lesser_std
+        tau_array[tauindices[0]:tauindices[1]] = truncnorm.rvs(a1, b1, loc=lesser_mean, scale=lesser_std, size=tausizes[0])
+
+        #normal2
+        a2 = (tau_change - greater_mean) / greater_std
+        b2 = (tau_max - greater_mean) / greater_std
+        tau_array[tauindices[1]:tauindices[2]] = truncnorm.rvs(a2, b2, loc=greater_mean, scale=greater_std, size=tausizes[1])   
+
+        return tau_array
+
     else:
         raise ValueError("Unsupported tau distribution type.")
 
