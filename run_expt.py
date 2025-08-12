@@ -28,6 +28,7 @@ def get_tau_array(distribution, hidden_size,  device, tau_groups=None, tau_propo
         tau_array = torch.zeros(hidden_size, dtype=torch.float32, device=device)
         tausizes = [int(p * hidden_size) for p in tau_proportions]
         tauindices = [0] + list(accumulate(tausizes))
+
         if tau_mean1 < tau_mean2:
             lesser_mean = tau_mean1
             greater_mean = tau_mean2
@@ -41,12 +42,13 @@ def get_tau_array(distribution, hidden_size,  device, tau_groups=None, tau_propo
         #normal1
         a1 = (tau_min - lesser_mean) / lesser_std
         b1 = (tau_change - lesser_mean) / lesser_std
-        tau_array[tauindices[0]:tauindices[1]] = truncnorm.rvs(a1, b1, loc=lesser_mean, scale=lesser_std, size=tausizes[0])
+
+        tau_array[tauindices[0]:tauindices[1]] = torch.tensor(truncnorm.rvs(a1, b1, loc=lesser_mean, scale=lesser_std, size=tausizes[0]))
 
         #normal2
         a2 = (tau_change - greater_mean) / greater_std
         b2 = (tau_max - greater_mean) / greater_std
-        tau_array[tauindices[1]:tauindices[2]] = truncnorm.rvs(a2, b2, loc=greater_mean, scale=greater_std, size=tausizes[1])   
+        tau_array[tauindices[1]:tauindices[2]] = torch.tensor(truncnorm.rvs(a2, b2, loc=greater_mean, scale=greater_std, size=tausizes[1]))
 
         return tau_array
 
@@ -102,6 +104,10 @@ def main(config, seed, name):
             tau_array = get_tau_array(conf['model']['tau_distribution'], conf['model']['hidden_size'], device, tau_groups=conf['model']['tau_groups'], tau_proportions=conf['model']['tau_proportions'])
         elif conf['model']['tau_distribution'] == 'uniform':
             tau_array = get_tau_array(conf['model']['tau_distribution'], conf['model']['hidden_size'], device, tau_min=conf['model']['tau_min'], tau_max=conf['model']['tau_max'])
+        elif conf['model']['tau_distribution'] == 'bimodal_normal':
+            tau_array = get_tau_array(conf['model']['tau_distribution'], conf['model']['hidden_size'], device, tau_proportions=conf['model']['tau_proportions'], tau_mean1=conf['model']['tau_mean1'], tau_mean2=conf['model']['tau_mean2'], tau_std1=conf['model']['tau_std1'], tau_std2=conf['model']['tau_std2'], tau_min=conf['model']['tau_min'], tau_max=conf['model']['tau_max'], tau_change=conf['model']['tau_change'])
+        else:
+            raise ValueError("Unsupported tau distribution type.")
         model = models.MultiTauRNN(conf['model']['input_size'], conf['model']['hidden_size'], conf['model']['output_size'], conf['model']['dt'], tau_array, conf['model']['activation'], conf['model']['bias'], conf['model']['sigma_in'], conf['model']['sigma_re'])
         optimizer = optim.Adam(model.parameters(), lr=conf['training']['learning_rate'])
         loss_fxn = nn.MSELoss()
@@ -111,6 +117,10 @@ def main(config, seed, name):
             tau_array = get_tau_array(conf['model']['tau_distribution'], conf['model']['hidden_size'], device, tau_groups=conf['model']['tau_groups'], tau_proportions=conf['model']['tau_proportions'])
         elif conf['model']['tau_distribution'] == 'uniform':
             tau_array = get_tau_array(conf['model']['tau_distribution'], conf['model']['hidden_size'], device, tau_min=conf['model']['tau_min'], tau_max=conf['model']['tau_max'])
+        elif conf['model']['tau_distribution'] == 'bimodal_normal':
+            tau_array = get_tau_array(conf['model']['tau_distribution'], conf['model']['hidden_size'], device, tau_proportions=conf['model']['tau_proportions'], tau_mean1=conf['model']['tau_mean1'], tau_mean2=conf['model']['tau_mean2'], tau_std1=conf['model']['tau_std1'], tau_std2=conf['model']['tau_std2'], tau_min=conf['model']['tau_min'], tau_max=conf['model']['tau_max'], tau_change=conf['model']['tau_change'])
+        else:
+            raise ValueError("Unsupported tau distribution type.")
         model = models.expirimental_RNN(conf['model']['input_size'], conf['model']['hidden_size'], conf['model']['output_size'], conf['model']['dt'], tau_array, conf['model']['activation'], conf['model']['tau_effect'], conf['model']['bias'], conf['model']['sigma_in'], conf['model']['sigma_re'])
         optimizer = optim.Adam(model.parameters(), lr=conf['training']['learning_rate'])
         loss_fxn = nn.MSELoss()
