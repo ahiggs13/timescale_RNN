@@ -108,6 +108,8 @@ def main(config, seed, name):
             tau_array = get_tau_array(conf['model']['tau_distribution'], conf['model']['hidden_size'], device, tau_proportions=conf['model']['tau_proportions'], tau_mean1=conf['model']['tau_mean1'], tau_mean2=conf['model']['tau_mean2'], tau_std1=conf['model']['tau_std1'], tau_std2=conf['model']['tau_std2'], tau_min=conf['model']['tau_min'], tau_max=conf['model']['tau_max'], tau_change=conf['model']['tau_change'])
         else:
             raise ValueError("Unsupported tau distribution type.")
+        #save tau_array to savepath
+        #np.save(os.path.join(savepath, 'tau_array.npy'), tau_array.cpu().numpy())
         model = models.MultiTauRNN(conf['model']['input_size'], conf['model']['hidden_size'], conf['model']['output_size'], conf['model']['dt'], tau_array, conf['model']['activation'], conf['model']['bias'], conf['model']['sigma_in'], conf['model']['sigma_re'])
         optimizer = optim.Adam(model.parameters(), lr=conf['training']['learning_rate'])
         loss_fxn = nn.MSELoss()
@@ -121,7 +123,24 @@ def main(config, seed, name):
             tau_array = get_tau_array(conf['model']['tau_distribution'], conf['model']['hidden_size'], device, tau_proportions=conf['model']['tau_proportions'], tau_mean1=conf['model']['tau_mean1'], tau_mean2=conf['model']['tau_mean2'], tau_std1=conf['model']['tau_std1'], tau_std2=conf['model']['tau_std2'], tau_min=conf['model']['tau_min'], tau_max=conf['model']['tau_max'], tau_change=conf['model']['tau_change'])
         else:
             raise ValueError("Unsupported tau distribution type.")
+        #save tau_array to savepath
+        #np.save(os.path.join(savepath, 'tau_array.npy'), tau_array.cpu().numpy())
         model = models.expirimental_RNN(conf['model']['input_size'], conf['model']['hidden_size'], conf['model']['output_size'], conf['model']['dt'], tau_array, conf['model']['activation'], conf['model']['tau_effect'], conf['model']['bias'], conf['model']['sigma_in'], conf['model']['sigma_re'])
+        optimizer = optim.Adam(model.parameters(), lr=conf['training']['learning_rate'])
+        loss_fxn = nn.MSELoss()
+        model, val_losses, losses = trainer.train_RNN(model, trainloader, valloader, optimizer, loss_fxn, conf, device, generator, savepath)
+    if conf['model']['type'] == 'lowrank_expirimental_RNN':
+        if conf['model']['tau_distribution'] == 'groups':
+            tau_array = get_tau_array(conf['model']['tau_distribution'], conf['model']['hidden_size'], device, tau_groups=conf['model']['tau_groups'], tau_proportions=conf['model']['tau_proportions'])
+        elif conf['model']['tau_distribution'] == 'uniform':
+            tau_array = get_tau_array(conf['model']['tau_distribution'], conf['model']['hidden_size'], device, tau_min=conf['model']['tau_min'], tau_max=conf['model']['tau_max'])
+        elif conf['model']['tau_distribution'] == 'bimodal_normal':
+            tau_array = get_tau_array(conf['model']['tau_distribution'], conf['model']['hidden_size'], device, tau_proportions=conf['model']['tau_proportions'], tau_mean1=conf['model']['tau_mean1'], tau_mean2=conf['model']['tau_mean2'], tau_std1=conf['model']['tau_std1'], tau_std2=conf['model']['tau_std2'], tau_min=conf['model']['tau_min'], tau_max=conf['model']['tau_max'], tau_change=conf['model']['tau_change'])
+        else:
+            raise ValueError("Unsupported tau distribution type.")
+        #save tau_array to savepath
+        #np.save(os.path.join(savepath, 'tau_array.npy'), tau_array.cpu().numpy())
+        model = models.lowrank_expirimental_RNN(conf['model']['input_size'], conf['model']['hidden_size'], conf['model']['output_size'], conf['model']['rank'], conf['model']['dt'], tau_array, conf['model']['activation'], conf['model']['tau_effect'], conf['model']['bias'], conf['model']['sigma_in'], conf['model']['sigma_re'])
         optimizer = optim.Adam(model.parameters(), lr=conf['training']['learning_rate'])
         loss_fxn = nn.MSELoss()
         model, val_losses, losses = trainer.train_RNN(model, trainloader, valloader, optimizer, loss_fxn, conf, device, generator, savepath)
