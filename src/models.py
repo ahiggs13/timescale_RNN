@@ -188,6 +188,8 @@ class expirimental_RNN(nn.Module):
         outputs = []
         B, T, _ = inputs.shape
 
+        inv_tau = (1.0 / self.taus).view(1, -1)  # (1, H) for broadcasting
+
         for t in range(T):
             input_t = inputs[:, t, :]  # (B, input_size)
 
@@ -204,22 +206,107 @@ class expirimental_RNN(nn.Module):
             dh_recur = self.hh(r) + re_noise
             dh_input = self.ih(input_t) 
 
-            if self.tau_effect == 'decay':
-                hidden = hidden + self.dt * ((1 / self.taus) * (dh_decay) + dh_recur + dh_input)
-            elif self.tau_effect == 'recur':
-                hidden = hidden + self.dt * ((1 / self.taus) * (dh_recur) + dh_decay + dh_input)
-            elif self.tau_effect == 'input':
-                hidden = hidden + self.dt * ((1 / self.taus) * dh_input + dh_decay + dh_recur)
-            elif self.tau_effect == 'all':
-                hidden = hidden + self.dt * ((1 / self.taus) * (dh_decay + dh_recur + dh_input))
-            elif self.tau_effect == 'recur_decay':
-                hidden = hidden + self.dt * ((1 / self.taus) * (dh_decay + dh_recur) + dh_input)
-            
+            if self.tau_effect == "decay":
+                dh = inv_tau * dh_decay + dh_recur + dh_input
+            elif self.tau_effect == "recur":
+                dh = inv_tau * dh_recur + dh_decay + dh_input
+            elif self.tau_effect == "input":
+                dh = inv_tau * dh_input + dh_decay + dh_recur
+            elif self.tau_effect == "all":
+                dh = inv_tau * (dh_decay + dh_recur + dh_input)
+            elif self.tau_effect == "recur_decay":
+                dh = inv_tau * (dh_decay + dh_recur) + dh_input
+            else:
+                dh = inv_tau * dh_decay + dh_recur + dh_input
+
+            hidden = hidden + self.dt * dh
             output = self.ho(self.activation(hidden))
-            outputs.append(output.unsqueeze(1))  # Keep time dim
+            outputs.append(output.unsqueeze(1))
             #print (f"taus: {self.taus}, dt: {self.dt}, dh: {dh}")
 
         return hidden, torch.cat(outputs, dim=1)  # (B, T, output_size)
+
+    def init_hidden(self, batch_size, device=None):
+        return torch.zeros(batch_size, self.hidden_size, device=device)
+    
+
+class lowrank_expirimental_RNN(nn.Module):
+    def __init__(self, input_size, hidden_size, output_size, rank, dt, tau_array,
+                 activation="tanh", tau_effect="decay", bias=True, sigma_in=0.01, sigma_re=0.01):
+        super(lowrank_expirimental_RNN, self).__init__()
+        self.hidden_size = hidden_size
+        self.dt = dt
+        self.sigma_in = sigma_in
+        self.sigma_re = sigma_re
+        self.tau_effect = tau_effect
+        self.rank = rank
+
+        # per-unit time constants (buffer so it moves with .to(device) but isn't trained)
+        self.register_buffer("taus", torch.as_tensor(tau_array, dtype=torch.float32))
+
+        # Trainable log-uniform parameters for taus
+        # self.log_taus = nn.Parameter(torch.log(torch.ones(H) * init_tau)) 
+        # taus = torch.exp(self.log_taus)  # always positive
+
+
+        # low-rank factors: M[:,k] = m_k, N[k,:] = n_k^T
+        self.m_matrix = nn.Parameter(torch.randn(hidden_size, rank) * 0.01)
+        self.n_matrix = nn.Parameter(torch.randn(rank, hidden_size) * 0.01)
+
+        activations = {"relu": F.relu, "tanh": torch.tanh}
+        self.activation = activations.get(activation.lower(), torch.tanh)
+
+        self.ih = nn.Linear(input_size, hidden_size, bias=False)
+        self.ho = nn.Linear(hidden_size, output_size, bias=bias)
+
+    def forward(self, inputs, hidden, noise=True):
+        """
+        inputs: (B, T, input_size)
+        hidden: (B, H)
+        returns: (hidden_T, outputs) where outputs is (B, T, output_size)
+        """
+        B, T, _ = inputs.shape
+        outputs = []
+
+        # recurrent weight = sum_k m_k n_k^T
+        Wrec = (self.m_matrix @ self.n_matrix) / self.hidden_size  # (H, H)
+
+        inv_tau = (1.0 / self.taus).view(1, -1)  # (1, H) for broadcasting
+
+        for t in range(T):
+            x_t = inputs[:, t, :]  # (B, input_size)
+
+            if noise:
+                # multiplicative input noise (as you wrote) and additive recurrent noise
+                input_noise = self.sigma_in * torch.randn_like(x_t)
+                re_noise = self.sigma_re * torch.randn_like(hidden)
+                x_t = x_t * (1.0 + input_noise)
+            else:
+                re_noise = torch.zeros_like(hidden)
+
+            r = self.activation(hidden)           # (B, H)
+            dh_decay = -hidden                    # (B, H)
+            dh_recur = (r @ Wrec.T) + re_noise    # (B, H)  ← use the low-rank matrix here
+            dh_input = self.ih(x_t)               # (B, H)
+
+            if self.tau_effect == "decay":
+                dh = inv_tau * dh_decay + dh_recur + dh_input
+            elif self.tau_effect == "recur":
+                dh = inv_tau * dh_recur + dh_decay + dh_input
+            elif self.tau_effect == "input":
+                dh = inv_tau * dh_input + dh_decay + dh_recur
+            elif self.tau_effect == "all":
+                dh = inv_tau * (dh_decay + dh_recur + dh_input)
+            elif self.tau_effect == "recur_decay":
+                dh = inv_tau * (dh_decay + dh_recur) + dh_input
+            else:
+                dh = inv_tau * dh_decay + dh_recur + dh_input
+
+            hidden = hidden + self.dt * dh
+            output = self.ho(self.activation(hidden))
+            outputs.append(output.unsqueeze(1))
+
+        return hidden, torch.cat(outputs, dim=1)
 
     def init_hidden(self, batch_size, device=None):
         return torch.zeros(batch_size, self.hidden_size, device=device)
