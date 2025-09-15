@@ -24,16 +24,33 @@ def masked_loss(output, target, loss_fxn, mask):
 
     return masked_loss
 
+def get_hh_lowrank(model):
+    m = model.m_matrix.weight.clone().cpu()
+    n = model.n_matrix.weight.clone().cpu()
+    return ((m @ n) / model.hidden_size)
+
+def weight_change_norm(initialmat, mat):
+    return torch.norm((torch.sub(mat, initialmat)))
+
 
 def train_RNN(model, dataloader, validationloader, optimizer, loss_fxn, config, device, generator, savepath):
     min_loss = float('inf')
     val_losses = []
     losses = []
+    wcn = []
     early_stop_loss = config['training']['early_stopping_loss']
     epochs = config['training']['epochs']
     save_name = config['training']['save_path']
     mask_loss = config['training'].get('mask_loss', False)
     clip_val = config['training'].get('grad_clip', None)  # Optional gradient clipping
+
+    # hold initial connectivity matrix for metrics
+    if model.hh is not None:
+        lowrank = False
+        initial_hh = model.hh.weight.clone().cpu()
+    else:
+        lowrank = True
+        initial_hh = get_hh_lowrank(model)
 
     for epoch in range(epochs):
         model.train()
@@ -100,6 +117,13 @@ def train_RNN(model, dataloader, validationloader, optimizer, loss_fxn, config, 
         val_loss /= len(validationloader)
         val_losses.append(val_loss)
 
+        if lowrank:
+            current_hh = get_hh_lowrank(model)
+        else:
+            current_hh = model.hh.weight.clone().cpu()
+
+        wcn.append(weight_change_norm(initial_hh, current_hh))
+
         print(f"Epoch {epoch+1}/{epochs} | Train Loss: {total_loss:.4f} | Val Loss: {val_loss:.4f}")
 
         # Save best model
@@ -113,5 +137,5 @@ def train_RNN(model, dataloader, validationloader, optimizer, loss_fxn, config, 
             print("Early stopping threshold reached.")
             break
 
-    return model, val_losses, losses
+    return model, val_losses, losses, wcn
 
