@@ -98,12 +98,12 @@ def main(config, seed, name):
         model = models.RNN(conf['model']['input_size'], conf['model']['hidden_size'], conf['model']['output_size'], conf['model']['dt'], conf['model']['tau'], conf['model']['activation'], conf['model']['bias'], conf['model']['sigma_in'], conf['model']['sigma_re'])
         optimizer = optim.Adam(model.parameters(), lr=conf['training']['learning_rate'])
         loss_fxn = nn.MSELoss()
-        model, val_losses, losses = trainer.train_RNN(model, trainloader, valloader, optimizer, loss_fxn, conf, device, generator, savepath)
+        model, val_losses, losses, wcn = trainer.train_RNN(model, trainloader, valloader, optimizer, loss_fxn, conf, device, generator, savepath)
     if conf['model']['type'] == 'EI_RNN':
         model = models.EI_RNN(conf['model']['input_size'], conf['model']['hidden_size'], conf['model']['output_size'], conf['model']['dt'], conf['model']['tau'], conf['model']['activation'], conf['model']['bias'], conf['model']['sigma_in'], conf['model']['sigma_re'], conf['model']['eprop'])
         optimizer = optim.Adam(model.parameters(), lr=conf['training']['learning_rate'])
         loss_fxn = nn.MSELoss()
-        model, val_losses, losses = trainer.train_RNN(model, trainloader, valloader, optimizer, loss_fxn, conf, device, generator, savepath)
+        model, val_losses, losses, wcn = trainer.train_RNN(model, trainloader, valloader, optimizer, loss_fxn, conf, device, generator, savepath)
     if conf['model']['type'] == 'MultiTauRNN':
         if conf['model']['tau_distribution'] == 'groups':
             tau_array = get_tau_array(conf['model']['tau_distribution'], conf['model']['hidden_size'], device, tau_groups=conf['model']['tau_groups'], tau_proportions=conf['model']['tau_proportions'])
@@ -118,7 +118,7 @@ def main(config, seed, name):
         model = models.MultiTauRNN(conf['model']['input_size'], conf['model']['hidden_size'], conf['model']['output_size'], conf['model']['dt'], tau_array, conf['model']['activation'], conf['model']['bias'], conf['model']['sigma_in'], conf['model']['sigma_re'])
         optimizer = optim.Adam(model.parameters(), lr=conf['training']['learning_rate'])
         loss_fxn = nn.MSELoss()
-        model, val_losses, losses = trainer.train_RNN(model, trainloader, valloader, optimizer, loss_fxn, conf, device, generator, savepath)
+        model, val_losses, losses, wcn = trainer.train_RNN(model, trainloader, valloader, optimizer, loss_fxn, conf, device, generator, savepath)
     if conf['model']['type'] == 'expirimental_RNN':
         if conf['model']['tau_distribution'] == 'groups':
             tau_array = get_tau_array(conf['model']['tau_distribution'], conf['model']['hidden_size'], device, tau_groups=conf['model']['tau_groups'], tau_proportions=conf['model']['tau_proportions'])
@@ -133,7 +133,7 @@ def main(config, seed, name):
         model = models.expirimental_RNN(conf['model']['input_size'], conf['model']['hidden_size'], conf['model']['output_size'], conf['model']['dt'], tau_array, conf['model']['activation'], conf['model']['tau_effect'], conf['model']['bias'], conf['model']['sigma_in'], conf['model']['sigma_re'])
         optimizer = optim.Adam(model.parameters(), lr=conf['training']['learning_rate'])
         loss_fxn = nn.MSELoss()
-        model, val_losses, losses = trainer.train_RNN(model, trainloader, valloader, optimizer, loss_fxn, conf, device, generator, savepath)
+        model, val_losses, losses, wcn = trainer.train_RNN(model, trainloader, valloader, optimizer, loss_fxn, conf, device, generator, savepath)
     if conf['model']['type'] == 'lowrank_expirimental_RNN':
         if conf['model']['tau_distribution'] == 'groups':
             tau_array = get_tau_array(conf['model']['tau_distribution'], conf['model']['hidden_size'], device, tau_groups=conf['model']['tau_groups'], tau_proportions=conf['model']['tau_proportions'])
@@ -148,7 +148,7 @@ def main(config, seed, name):
         model = models.lowrank_expirimental_RNN(conf['model']['input_size'], conf['model']['hidden_size'], conf['model']['output_size'], conf['model']['rank'], conf['model']['dt'], tau_array, conf['model']['activation'], conf['model']['tau_effect'], conf['model']['bias'], conf['model']['sigma_in'], conf['model']['sigma_re'])
         optimizer = optim.Adam(model.parameters(), lr=conf['training']['learning_rate'])
         loss_fxn = nn.MSELoss()
-        model, val_losses, losses = trainer.train_RNN(model, trainloader, valloader, optimizer, loss_fxn, conf, device, generator, savepath)
+        model, val_losses, losses, wcn = trainer.train_RNN(model, trainloader, valloader, optimizer, loss_fxn, conf, device, generator, savepath)
     #add other models here
 
     #some plotting here
@@ -158,6 +158,7 @@ def main(config, seed, name):
     # Save training and validation losses
     np.save(os.path.join(savepath, 'train_losses.npy'), np.array(losses))
     np.save(os.path.join(savepath, 'val_losses.npy'), np.array(val_losses))
+    np.save(os.path.join(savepath, 'weight_change_norm.npy'), np.array(wcn))
 
 if __name__ == '__main__':
     fire.Fire(main)
