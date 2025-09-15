@@ -35,7 +35,8 @@ def plot_example(model, batch, device, generator, savepath, returnhidden=False, 
             fig, ax = plt.subplots(figsize=(10,4))
             ax.plot(outputs[i], label='Predictions')
             ax.plot(targets[i], label="Targets")
-            ax.plot(inputs[i], label='Inputs')
+            if i != 0:
+                ax.plot(inputs[i], label='Inputs')
             ax.legend()
             if savepath is not None:
                 plt.savefig(os.path.join(savepath, f'output_{i}.png'))

@@ -24,7 +24,6 @@ def get_tau_array(distribution, hidden_size,  device, tau_groups=None, tau_propo
         if tau_min is None or tau_max is None:
             raise ValueError("tau_min and tau_max must be provided for uniform distribution.")
         return torch.FloatTensor(hidden_size).uniform_(tau_min, tau_max).to(device)
-    elif distribution == 'bimodal_normal':
         tau_array = torch.zeros(hidden_size, dtype=torch.float32, device=device)
         tausizes = [int(p * hidden_size) for p in tau_proportions]
         tauindices = [0] + list(accumulate(tausizes))
@@ -61,7 +60,7 @@ def main(config, seed, name):
     
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     generator = torch.Generator().manual_seed(seed)
-    savepath = name + '_' + str(seed) + '/'
+    savepath = 'models/' + name + '_' + str(seed) + '/'
     if not os.path.isdir(savepath):
         os.mkdir(savepath)
     
@@ -81,6 +80,11 @@ def main(config, seed, name):
         alldata = datasets.perceptualClassification(seed, conf['expt']['num_cohs'], conf['expt']['stim_start_min'], conf['expt']['stim_start_max'], conf['expt']['coh_radius'], conf['expt']['symmetric'], conf['expt']['duration'], conf['model']['dt'], conf['training']['size'])
     elif conf['expt']['type'] == 'review_task':
         alldata = datasets.reviewTask(seed, conf['expt']['num_values'], conf['expt']['stim_start_min'], conf['expt']['stim_start_max'], conf['expt']['stim_length'], conf['expt']['value_min'], conf['expt']['value_max'], conf['expt']['delay'], conf['expt']['delay_sigma'], conf['expt']['stim_sigma'], conf['expt']['duration'], conf['model']['dt'], conf['training']['size'])
+    elif conf['expt']['type'] == 'raiyyan_task':
+        alldata = datasets.NonstationaryRewardDataset(tau_map=conf['expt']['tau_map'],
+                                                      n_cue_events=conf['expt']['n_cue_events'],
+                                                      cue_length=conf['expt']['cue_length'],
+                                                      seed=seed)
     #put other datasets here 
 
     traindata, validdata = random_split(alldata, conf['training']['valid_split'], generator=generator)
