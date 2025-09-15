@@ -24,6 +24,7 @@ def get_tau_array(distribution, hidden_size,  device, tau_groups=None, tau_propo
         if tau_min is None or tau_max is None:
             raise ValueError("tau_min and tau_max must be provided for uniform distribution.")
         return torch.FloatTensor(hidden_size).uniform_(tau_min, tau_max).to(device)
+    elif distribution == 'bimodal_normal':
         tau_array = torch.zeros(hidden_size, dtype=torch.float32, device=device)
         tausizes = [int(p * hidden_size) for p in tau_proportions]
         tauindices = [0] + list(accumulate(tausizes))
