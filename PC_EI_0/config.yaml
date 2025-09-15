@@ -1,0 +1,32 @@
+expt:
+  coh_radius: 0.1
+  duration: 20
+  num_cohs: 5
+  stim_start_max: 5
+  stim_start_min: 2
+  symmetric: false
+  type: PC
+model:
+  activation: relu
+  bias: true
+  dt: 0.01
+  eprop: 0.8
+  hidden_size: 100
+  input_size: 2
+  output_size: 1
+  sigma_in: 0.05
+  sigma_re: 0.01
+  tau: 1
+  type: EI_RNN
+training:
+  batch_size: 50
+  early_stopping_loss: 0.005
+  epochs: 1000
+  grad_clip: null
+  learning_rate: 0.001
+  mask_loss: false
+  save_path: best_model.pth
+  size: 1000
+  valid_split:
+  - 0.85
+  - 0.15

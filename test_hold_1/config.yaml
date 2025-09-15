@@ -1,0 +1,29 @@
+expt:
+  decision_length: 2
+  duration: 20
+  sigma_length: 1
+  stim_length: 1
+  stim_start_max: 10
+  stim_start_min: 5
+  type: hold_DM
+model:
+  activation: relu
+  bias: true
+  dt: 0.01
+  hidden_size: 100
+  input_size: 1
+  output_size: 1
+  sigma_in: 0.01
+  sigma_re: 0.01
+  tau: 1
+  type: RNN
+training:
+  batch_size: 50
+  early_stopping_loss: 0.02
+  epocs: 1000
+  learning_rate: 0.001
+  save_path: best_model.pth
+  size: 1000
+  valid_split:
+  - 0.85
+  - 0.15
