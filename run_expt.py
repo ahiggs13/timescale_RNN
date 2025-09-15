@@ -60,7 +60,7 @@ def main(config, seed, name):
     
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     generator = torch.Generator().manual_seed(seed)
-    savepath = 'models/' + name + '_' + str(seed) + '/'
+    savepath = 'rnn_results/' + name + '_' + str(seed) + '/'
     if not os.path.isdir(savepath):
         os.mkdir(savepath)
     
