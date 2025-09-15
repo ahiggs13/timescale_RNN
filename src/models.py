@@ -127,9 +127,11 @@ class MultiTauRNN(nn.Module):
         super(MultiTauRNN, self).__init__()
         self.hidden_size = hidden_size
         self.dt = dt
-        self.taus = tau_array
         self.sigma_in = sigma_in
         self.sigma_re = sigma_re
+
+        # per-unit time constants (buffer so it moves with .to(device) but isn't trained)
+        self.register_buffer("taus", torch.as_tensor(tau_array, dtype=torch.float32))
 
         activations = {'relu': F.relu, 'tanh': F.tanh}
         self.activation = activations.get(activation.lower(), F.tanh)
@@ -171,10 +173,12 @@ class expirimental_RNN(nn.Module):
         super(expirimental_RNN, self).__init__()
         self.hidden_size = hidden_size
         self.dt = dt
-        self.taus = tau_array
         self.sigma_in = sigma_in
         self.sigma_re = sigma_re
         self.tau_effect = tau_effect
+
+        # per-unit time constants (buffer so it moves with .to(device) but isn't trained)
+        self.register_buffer("taus", torch.as_tensor(tau_array, dtype=torch.float32))
 
         activations = {'relu': F.relu, 'tanh': F.tanh}
         self.activation = activations.get(activation.lower(), F.tanh)
