@@ -85,6 +85,9 @@ def main(config, seed, name):
         alldata = datasets.NonstationaryRewardDataset(tau_map=conf['expt']['tau_map'],
                                                       n_cue_events=conf['expt']['n_cue_events'],
                                                       cue_length=conf['expt']['cue_length'],
+                                                      duration=conf['expt']['duration'],
+                                                      size=conf['training']['size'],
+                                                      dt=conf['model']['dt'],
                                                       seed=seed)
     #put other datasets here 
 

@@ -357,7 +357,7 @@ class NonstationaryRewardDataset(Dataset):
         self.rng = np.random.default_rng(seed)
 
         if tau_map is None:
-            tau_map = {"short": 2, "medium": 5, "long": 20}
+            tau_map = {"tau": 10}
         self.tau_map = tau_map
         self.cues = list(tau_map.keys())
 
