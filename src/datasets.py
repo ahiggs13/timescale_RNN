@@ -347,7 +347,7 @@ def exp_weighted_avg(rewards, tau):
     return np.sum(rewards[::-1] * weights) / np.sum(weights)
 
 class NonstationaryRewardDataset(Dataset):
-    def __init__(self, size=1000, duration=20, dt=0.01, tau_map=None, sigma=0.05, seed=42, n_cue_events=3, cue_length=None):
+    def __init__(self, seed, size=1000, duration=20, dt=0.01, tau_map=None, sigma=0.05, n_cue_events=3, cue_length=None):
         super().__init__()
         self.size = size
         self.duration = duration
@@ -428,3 +428,58 @@ class NonstationaryRewardDataset(Dataset):
             torch.tensor(inputs, dtype=torch.float32),
             torch.tensor(output, dtype=torch.float32)
         )
+    
+class DelayDiscrimination(Dataset):
+    def __init__(self, seed, interval_length, stim_length, stim_noise, stim1_strength, stim2_strength,
+        stim_cue_on=False, stim_cue_strength=1.0, temporal_noise=100, duration=20, dt=0.01, size=1000):
+        
+        # General parameters
+        self.seed = seed
+        self.duration = duration
+        self.dt = dt
+        self.size = size
+        self.sequence_length = int((duration + dt) / dt)
+
+        # Task parameters
+        self.temporal_noise = temporal_noise # 100 is a good value for strong temporal noise, 0 for no temporal noise
+        self.interval_length = interval_length
+        self.stim_length = stim_length
+        self.stim_noise = stim_noise
+        self.stim1_strength = stim1_strength
+        self.stim2_strength = stim2_strength
+
+        # Cue parameters
+        self.stim_cue_on = stim_cue_on
+        self.stim_cue_strength = stim_cue_strength
+
+    def __len__(self):
+        return self.size
+
+    def __getitem__(self, index):
+        # Use a different random seed for each sample to ensure variability
+        rng = np.random.default_rng(self.seed + index*10)
+
+        # Add temporal noise to the interval length and stimulus onsets
+        interval_length = self.interval_length + rng.normal(0, self.temporal_noise)
+        stim1_onset = int((self.sequence_length - interval_length - self.stim_length * 2) / 2 + rng.normal(0, self.temporal_noise)) 
+        stim2_onset = int(stim1_onset + self.stim_length + interval_length + rng.normal(0, self.temporal_noise))
+
+        # Generate input and output sequences
+        inputs = torch.zeros(self.sequence_length)
+        outputs = torch.zeros(self.sequence_length)
+
+        # Add the two stimuli with noise
+        inputs[stim1_onset:stim1_onset + self.stim_length] = torch.tensor(self.stim1_strength + rng.normal(0, self.stim_noise, self.stim_length), dtype=torch.float32)
+        inputs[stim2_onset:stim2_onset + self.stim_length] = torch.tensor(self.stim2_strength + rng.normal(0, self.stim_noise, self.stim_length), dtype=torch.float32)
+
+        # Add a cue signal if enabled
+        if self.stim_cue_on:
+            cue = torch.zeros(self.sequence_length)
+            cue[stim1_onset:stim1_onset + self.stim_length] = self.stim_cue_strength
+            cue[stim2_onset:stim2_onset + self.stim_length] = self.stim_cue_strength
+            inputs = torch.stack([inputs, cue], dim=1)
+
+        # Set the output to 1 if stimulus 1 is stronger, otherwise 0, starting after the second stimulus ends
+        outputs[stim2_onset + self.stim_length:] = 1 if self.stim1_strength > self.stim2_strength else -1
+
+        return inputs, outputs
