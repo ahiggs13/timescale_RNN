@@ -261,7 +261,6 @@ class perceptualClassification(Dataset):
         output = torch.tensor(output, dtype=torch.float32)
 
         return input, output
-    
 
 class perceptualClassification_50_test(Dataset):
     def __init__(self, seed, stim_start_min, stim_start_max, symmetric=True, duration=20.0, dt=0.01, size=1000):
@@ -289,7 +288,6 @@ class perceptualClassification_50_test(Dataset):
         output = torch.tensor(output, dtype=torch.float32)
 
         return input, output
-
 
 class reviewTask(Dataset):
     def __init__(self, seed, num_values, stim_start_min, stim_start_max, stim_length, value_min, value_max, delay, delay_sigma, stim_sigma = 0, duration=20.0, dt=0.01, size=1000):
@@ -340,95 +338,54 @@ class reviewTask(Dataset):
 
         return input, output
 
-def exp_weighted_avg(rewards, tau):
-    """Compute exponential-weighted average of past rewards with timescale tau."""
+def exp_weighted_avg(rewards, tau, n=None):
+    """Compute exponential-weighted average of past rewards with timescale tau, using only n steps back if specified."""
     T = len(rewards)
-    weights = np.exp(-np.arange(1, T+1) / tau)  # 1 step ago gets largest weight
+    if n is not None:
+        rewards = rewards[-n:]
+        T = len(rewards)
+    weights = np.exp(-np.arange(1, T+1) / tau) # 1 step ago gets largest weight
     return np.sum(rewards[::-1] * weights) / np.sum(weights)
 
-class NonstationaryRewardDataset(Dataset):
-    def __init__(self, seed, size=1000, duration=20, dt=0.01, tau_map=None, sigma=0.05, n_cue_events=3, cue_length=None):
-        super().__init__()
-        self.size = size
+class NonstationaryRewardDelayDataset(Dataset):
+    def __init__(self, seed, kernel_tau, read_delay=3, cue_onset=3, integration_window=10, init_p=0.5, walk_step_size=0.05, duration=20, dt=0.01, size=1000):
+        # General parameters
+        self.seed = seed
         self.duration = duration
         self.dt = dt
-        self.seq_len = int((duration + dt) / dt)
-        self.sigma = sigma
-        self.rng = np.random.default_rng(seed)
+        self.size = size
+        self.sequence_length = int((duration + dt) / dt)
+        self.rng = np.random.default_rng(self.seed)
 
-        if tau_map is None:
-            tau_map = {"tau": 10}
-        self.tau_map = tau_map
-        self.cues = list(tau_map.keys())
-
-        # Number of cue events and length range
-        self.n_cue_events = n_cue_events
-        max_len = self.seq_len // n_cue_events
-        if cue_length is None:
-            self.cue_length = (max_len//10, max_len-1)
-        else:
-            if cue_length[1] > max_len:
-                raise ValueError(
-                    f"Max cue_length {cue_length[1]} is too long. "
-                    f"Should be ≤ {max_len} for {n_cue_events} events."
-                )
-            self.cue_length = cue_length
-
-        self.data = [self._generate_sequence() for _ in range(size)]
-
-    def _generate_sequence(self):
-        seq_len = self.seq_len
-        cues = self.cues
-        tau_map = self.tau_map
-
-        # Generate nonstationary reward sequence
-        p = 0.5
-        rewards = []
-        for t in range(seq_len):
-            p = np.clip(p + self.rng.normal(0, self.sigma), 0.05, 0.95)
-            rewards.append(self.rng.binomial(1, p))
-        rewards = np.array(rewards)*10
-
-        target_seq = np.zeros(seq_len, dtype=float)
-        cue_onehot = np.zeros((seq_len, len(cues)), dtype=float)
-
-        # Split timeline into n segments and drop 1 cue per segment
-        segment_len = seq_len // self.n_cue_events
-        for i in range(self.n_cue_events):
-            start_seg = i * segment_len
-            end_seg = (i + 1) * segment_len
-
-            # Sample cue length in allowed range
-            clen = self.rng.integers(self.cue_length[0], self.cue_length[1] + 1)
-            if clen > (end_seg - start_seg):
-                clen = end_seg - start_seg
-
-            # Sample cue start within segment
-            cstart = self.rng.integers(start_seg, end_seg - clen)
-            cend = cstart + clen
-
-            cue = self.rng.choice(cues)
-            tau = tau_map[cue]
-
-            # Fill in cue pulse + continuous target
-            cue_onehot[cstart:cend, cues.index(cue)] = 1.0
-            for t in range(cstart, cend):
-                target_seq[t] = exp_weighted_avg(rewards[:t+1], tau)
-
-        # Inputs = [reward] + one-hot cue
-        inputs = np.concatenate([rewards[:, None], cue_onehot], axis=1)
-        return inputs, target_seq
+        # Task parameters
+        self.cue_onset = int(cue_onset / dt)                       
+        self.kernel_tau = int(kernel_tau / dt)                     
+        self.integration_window = int(integration_window / self.dt) 
+        self.init_p = init_p
+        self.walk_step_size = walk_step_size
+        self.read_delay = int(read_delay / dt)                     
 
     def __len__(self):
         return self.size
 
-    def __getitem__(self, idx):
-        inputs, output = self.data[idx]
-        return (
-            torch.tensor(inputs, dtype=torch.float32),
-            torch.tensor(output, dtype=torch.float32)
-        )
-    
+    def __getitem__(self, index):
+        # Generate input and output sequences
+        inputs = torch.zeros((self.sequence_length, 1))
+        outputs = torch.zeros(self.sequence_length)
+
+        # Generate nonstationary reward pulses
+        p = self.init_p
+        for t in range(self.sequence_length):
+            p = np.clip(p + self.rng.normal(0, self.walk_step_size), 0.05, 0.95)
+            if t >= self.cue_onset:
+                inputs[t] = self.rng.binomial(1, p)
+                current_output_bin = int(max(t + 1 - self.read_delay, 1))  # Ensure at least 1 step
+                outputs[t] = exp_weighted_avg(inputs[:current_output_bin, 0].numpy(), 
+                                              self.kernel_tau, 
+                                              n=self.integration_window)
+
+        return inputs, outputs
+
 class DelayDiscrimination(Dataset):
     def __init__(self, seed, interval_length, stim_length, stim_noise, stim1_strength, stim2_strength,
         stim_cue_on=False, stim_cue_strength=1.0, temporal_noise=100, duration=20, dt=0.01, size=1000):

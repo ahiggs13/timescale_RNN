@@ -33,21 +33,24 @@ def weight_change_norm(initialmat, mat):
     return torch.norm((torch.sub(mat, initialmat)))
 
 
-def train_RNN(model, dataloader, validationloader, optimizer, loss_fxn, config, device, generator, savepath):
+def train_RNN(model, dataloader, validationloader, optimizer, loss_fxn, config, device, generator, savepath, quick_test=False):
     min_loss = float('inf')
     val_losses = []
     losses = []
     wcn = []
     early_stop_loss = config['training']['early_stopping_loss']
-    epochs = config['training']['epochs']
+    if quick_test == False:
+        epochs = config['training']['epochs']
+    else:
+        epochs = 2
     save_name = config['training']['save_path']
     mask_loss = config['training'].get('mask_loss', False)
-    clip_val = config['training'].get('grad_clip', None)  # Optional gradient clipping
+    clip_val = config['training'].get('grad_clip', None)
 
     # hold initial connectivity matrix for metrics
     if model.hh is not None:
         lowrank = False
-        initial_hh = model.hh.weight.clone().cpu()
+        initial_hh = model.hh.weight.detach().clone().cpu()
     else:
         lowrank = True
         initial_hh = get_hh_lowrank(model)
@@ -65,13 +68,13 @@ def train_RNN(model, dataloader, validationloader, optimizer, loss_fxn, config, 
             hidden = model.init_hidden(batch_size, device)
 
             optimizer.zero_grad()
-            if inputs.ndimension() == 2:  # If the input is [batch_size, seq_len]
+            if inputs.ndimension() == 2:
                 inputs = inputs.unsqueeze(-1)
 
             _, outputs = model(inputs, hidden, noise=True)
-            
-            if targets.ndimension() == 2:  # If the target is [batch_size, seq_len]
-                targets = targets.unsqueeze(-1)  # Now the shape is [batch_size, seq_len, 1]
+
+            if targets.ndimension() == 2:
+                targets = targets.unsqueeze(-1)
 
             if mask_loss:
                 loss = masked_loss(outputs, targets, loss_fxn, mask)
@@ -101,9 +104,9 @@ def train_RNN(model, dataloader, validationloader, optimizer, loss_fxn, config, 
                 val_batch_size = val_inputs.size(0)
                 hidden = model.init_hidden(val_batch_size, device)
 
-                if val_inputs.ndimension() == 2:  # If the input is [batch_size, seq_len]
+                if val_inputs.ndimension() == 2:
                     val_inputs = val_inputs.unsqueeze(-1)
-                    
+
                 _, val_outputs = model(val_inputs, hidden, noise=True)
 
                 if val_targets.ndimension() == 2:
@@ -111,7 +114,7 @@ def train_RNN(model, dataloader, validationloader, optimizer, loss_fxn, config, 
 
                 if mask_loss:
                     val_loss += masked_loss(val_outputs, val_targets, loss_fxn, val_mask)
-                else:  
+                else:
                     val_loss += loss_fxn(val_outputs, val_targets).item()
 
         val_loss /= len(validationloader)
@@ -120,19 +123,17 @@ def train_RNN(model, dataloader, validationloader, optimizer, loss_fxn, config, 
         if lowrank:
             current_hh = get_hh_lowrank(model)
         else:
-            current_hh = model.hh.weight.clone().cpu()
+            current_hh = model.hh.weight.detach().clone().cpu()
 
         wcn.append(weight_change_norm(initial_hh, current_hh))
 
         print(f"Epoch {epoch+1}/{epochs} | Train Loss: {total_loss:.4f} | Val Loss: {val_loss:.4f}")
 
-        # Save best model
         if val_loss < min_loss:
             min_loss = val_loss
             torch.save(model.state_dict(), savepath + save_name)
             print(f"Model improved and saved at epoch {epoch+1} with val loss {min_loss:.4f}")
 
-        # Early stopping
         if val_loss <= early_stop_loss:
             print("Early stopping threshold reached.")
             break
