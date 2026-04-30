@@ -348,41 +348,41 @@ def exp_weighted_avg(rewards, tau, n=None):
     return np.sum(rewards[::-1] * weights) / np.sum(weights)
 
 class NonstationaryRewardDelayDataset(Dataset):
-    def __init__(self, seed, kernel_tau, read_delay=3, cue_onset=3, integration_window=10, init_p=0.5, walk_step_size=0.05, duration=20, dt=0.01, size=1000):
+    def __init__(self, seed, kernel_tau, read_delay=3, cue_onset=3, integration_window=10, 
+                 noise_mean=0.0, noise_std=1.0, duration=20, dt=0.01, size=1000):
         # General parameters
         self.seed = seed
         self.duration = duration
         self.dt = dt
         self.size = size
         self.sequence_length = int((duration + dt) / dt)
-        self.rng = np.random.default_rng(self.seed)
 
         # Task parameters
-        self.cue_onset = int(cue_onset / dt)                       
-        self.kernel_tau = int(kernel_tau / dt)                     
-        self.integration_window = int(integration_window / self.dt) 
-        self.init_p = init_p
-        self.walk_step_size = walk_step_size
-        self.read_delay = int(read_delay / dt)                     
+        self.cue_onset = int(cue_onset / dt)
+        self.kernel_tau = int(kernel_tau / dt)
+        self.integration_window = int(integration_window / self.dt)
+        self.read_delay = int(read_delay / dt)
+
+        # Noise parameters
+        self.noise_mean = noise_mean
+        self.noise_std = noise_std
 
     def __len__(self):
         return self.size
 
     def __getitem__(self, index):
-        # Generate input and output sequences
+        rng = np.random.default_rng([self.seed, index])
         inputs = torch.zeros((self.sequence_length, 1))
         outputs = torch.zeros(self.sequence_length)
 
-        # Generate nonstationary reward pulses
-        p = self.init_p
-        for t in range(self.sequence_length):
-            p = np.clip(p + self.rng.normal(0, self.walk_step_size), 0.05, 0.95)
-            if t >= self.cue_onset:
-                inputs[t] = self.rng.binomial(1, p)
-                current_output_bin = int(max(t + 1 - self.read_delay, 1))  # Ensure at least 1 step
-                outputs[t] = exp_weighted_avg(inputs[:current_output_bin, 0].numpy(), 
-                                              self.kernel_tau, 
-                                              n=self.integration_window)
+        for t in range(self.cue_onset, self.sequence_length):
+            inputs[t] = rng.normal(self.noise_mean, self.noise_std)
+            current_output_bin = max(t + 1 - self.read_delay, 1)
+            outputs[t] = exp_weighted_avg(
+                inputs[:current_output_bin, 0].numpy(),
+                self.kernel_tau,
+                n=self.integration_window
+            )
 
         return inputs, outputs
 

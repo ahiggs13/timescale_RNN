@@ -1,4 +1,6 @@
 import torch 
+import numpy as np
+import os
 
 
 def masked_loss(output, target, loss_fxn, mask):
@@ -24,6 +26,7 @@ def masked_loss(output, target, loss_fxn, mask):
 
     return masked_loss
 
+
 def get_hh_lowrank(model):
     m = model.m_matrix.weight.clone().cpu()
     n = model.n_matrix.weight.clone().cpu()
@@ -46,6 +49,12 @@ def train_RNN(model, dataloader, validationloader, optimizer, loss_fxn, config, 
     save_name = config['training']['save_path']
     mask_loss = config['training'].get('mask_loss', False)
     clip_val = config['training'].get('grad_clip', None)
+    weight_ckpt_every = config['training'].get('weight_checkpoint_every', 100)
+
+    # Paths for incremental loss / wcn arrays
+    train_loss_path = os.path.join(savepath, "train_losses.npy")
+    val_loss_path   = os.path.join(savepath, "val_losses.npy")
+    wcn_path        = os.path.join(savepath, "weight_change_norm.npy")
 
     # hold initial connectivity matrix for metrics
     if model.hh is not None:
@@ -125,7 +134,12 @@ def train_RNN(model, dataloader, validationloader, optimizer, loss_fxn, config, 
         else:
             current_hh = model.hh.weight.detach().clone().cpu()
 
-        wcn.append(weight_change_norm(initial_hh, current_hh))
+        wcn.append(weight_change_norm(initial_hh, current_hh).item())
+
+        # Incremental saves (losses + wcn written every epoch)
+        np.save(train_loss_path, np.array(losses))
+        np.save(val_loss_path, np.array(val_losses))
+        np.save(wcn_path, np.array(wcn))
 
         print(f"Epoch {epoch+1}/{epochs} | Train Loss: {total_loss:.4f} | Val Loss: {val_loss:.4f}")
 
@@ -134,9 +148,12 @@ def train_RNN(model, dataloader, validationloader, optimizer, loss_fxn, config, 
             torch.save(model.state_dict(), savepath + save_name)
             print(f"Model improved and saved at epoch {epoch+1} with val loss {min_loss:.4f}")
 
+        if (epoch + 1) % weight_ckpt_every == 0:
+            torch.save(model.state_dict(), os.path.join(savepath, f"checkpoint_epoch_{epoch+1:05d}.pth"))
+            print(f"Periodic weight checkpoint saved at epoch {epoch+1}")
+
         if val_loss <= early_stop_loss:
             print("Early stopping threshold reached.")
             break
 
     return model, val_losses, losses, wcn
-
