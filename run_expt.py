@@ -8,7 +8,7 @@ import torch.optim as optim
 import yaml
 import fire
 from torch.utils.data import DataLoader, random_split
-from scipy.stats import truncnorm
+from scipy.stats import gamma, truncnorm
 
 from src import analysis, datasets, models, trainer
 
@@ -30,6 +30,7 @@ def get_tau_array(
     tau_std1=None,
     tau_std2=None,
     tau_change=None,
+    gamma=None
 ):
     """Build a tau array according to the specified distribution."""
     if distribution == "groups":
@@ -75,6 +76,9 @@ def get_tau_array(
         )
 
         return tau_array
+    
+    if distribution == 'normal':
+        return torch.exp(torch.normal(mean=tau_mean1, std=tau_std1, size=(hidden_size,))*gamma).to(device)
 
     raise ValueError(f"Unsupported tau distribution type: '{distribution}'.")
 
@@ -183,7 +187,13 @@ def _build_tau_array(conf, device):
             tau_min=m["tau_min"], tau_max=m["tau_max"],
             tau_change=m["tau_change"],
         )
-
+    if distribution == "normal":
+        return get_tau_array(
+            distribution, hidden_size, device,
+            tau_mean1=m["tau_mean1"], tau_std1=m["tau_std1"],
+            gamma=m["gamma"],
+        )
+    
     raise ValueError(f"Unsupported tau distribution type: '{distribution}'.")
 
 
