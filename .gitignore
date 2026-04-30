@@ -5,3 +5,4 @@
 rnn_results/
 configs/
 logs/
+test.ipynb
