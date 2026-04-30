@@ -136,7 +136,7 @@ def load_dataset(conf, seed):
     if expt_type == "integration_task":
         return datasets.NonstationaryRewardDelayDataset(
             seed,
-            expt["kernel_tau"], expt["read_delay"],
+            expt["kernel_tau"], expt["read_delay"], expt["autocorr"]
         )
     
     if expt_type == 'delay_discrimination':

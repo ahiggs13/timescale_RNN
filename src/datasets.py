@@ -338,18 +338,9 @@ class reviewTask(Dataset):
 
         return input, output
 
-def exp_weighted_avg(rewards, tau, n=None):
-    """Compute exponential-weighted average of past rewards with timescale tau, using only n steps back if specified."""
-    T = len(rewards)
-    if n is not None:
-        rewards = rewards[-n:]
-        T = len(rewards)
-    weights = np.exp(-np.arange(1, T+1) / tau) # 1 step ago gets largest weight
-    return np.sum(rewards[::-1] * weights) / np.sum(weights)
-
 class NonstationaryRewardDelayDataset(Dataset):
-    def __init__(self, seed, kernel_tau, read_delay=3, cue_onset=3, integration_window=10, 
-                 noise_mean=0.0, noise_std=1.0, duration=20, dt=0.01, size=1000):
+    def __init__(self, seed, kernel_tau, read_delay=3, cue_onset=3, integration_window=10,
+                 noise_mean=0.0, noise_std=1.0, autocorr=0.0, duration=20, dt=0.01, size=1000):
         # General parameters
         self.seed = seed
         self.duration = duration
@@ -366,23 +357,32 @@ class NonstationaryRewardDelayDataset(Dataset):
         # Noise parameters
         self.noise_mean = noise_mean
         self.noise_std = noise_std
+        self.autocorr = autocorr  # 0 = white noise, 0.99 = very slow
 
     def __len__(self):
         return self.size
+
+    def _exp_weighted_avg(self, rewards, tau, n=None):
+        """Compute exponential-weighted average of past rewards with timescale tau, using only n steps back if specified."""
+        T = len(rewards)
+        if n is not None:
+            rewards = rewards[-n:]
+            T = len(rewards)
+        weights = np.exp(-np.arange(1, T+1) / tau) # 1 step ago gets largest weight
+        return np.sum(rewards[::-1] * weights) / np.sum(weights)
 
     def __getitem__(self, index):
         rng = np.random.default_rng([self.seed, index])
         inputs = torch.zeros((self.sequence_length, 1))
         outputs = torch.zeros(self.sequence_length)
 
+        x = 0.0
         for t in range(self.cue_onset, self.sequence_length):
-            inputs[t] = rng.normal(self.noise_mean, self.noise_std)
+            noise = rng.normal(self.noise_mean, self.noise_std)
+            x = self.autocorr * x + np.sqrt(1 - self.autocorr**2) * noise
+            inputs[t] = x
             current_output_bin = max(t + 1 - self.read_delay, 1)
-            outputs[t] = exp_weighted_avg(
-                inputs[:current_output_bin, 0].numpy(),
-                self.kernel_tau,
-                n=self.integration_window
-            )
+            outputs[t] = self._exp_weighted_avg(inputs[:current_output_bin, 0].numpy(), self.kernel_tau, n=self.integration_window)
 
         return inputs, outputs
 
