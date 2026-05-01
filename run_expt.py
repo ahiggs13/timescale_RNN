@@ -30,7 +30,7 @@ def get_tau_array(
     tau_std1=None,
     tau_std2=None,
     tau_change=None,
-    gamma=None
+    eta=None
 ):
     """Build a tau array according to the specified distribution."""
     if distribution == "groups":
@@ -78,7 +78,7 @@ def get_tau_array(
         return tau_array
     
     if distribution == 'normal':
-        return torch.exp(torch.normal(mean=tau_mean1, std=tau_std1, size=(hidden_size,))*gamma).to(device)
+        return torch.exp(torch.normal(mean=tau_mean1, std=tau_std1, size=(hidden_size,))*eta).to(device)
 
     raise ValueError(f"Unsupported tau distribution type: '{distribution}'.")
 
@@ -191,7 +191,7 @@ def _build_tau_array(conf, device):
         return get_tau_array(
             distribution, hidden_size, device,
             tau_mean1=m["tau_mean1"], tau_std1=m["tau_std1"],
-            gamma=m["gamma"],
+            eta=m["eta"],
         )
     
     raise ValueError(f"Unsupported tau distribution type: '{distribution}'.")
@@ -299,4 +299,4 @@ if __name__ == "__main__":
     fire.Fire(main)
 
 # Usage:
-# python -u run_expt_pep8.py --config='configs/uniform.yaml' --seed=0 --name='DelayDiscrimination_test'
+# python -u run_expt.py --config='configs/uniform.yaml' --seed=0 --name='whatever'

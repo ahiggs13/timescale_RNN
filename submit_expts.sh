@@ -8,10 +8,10 @@
 
 source activate py312p9
 
-mapfile -t CONFIGS < <(printf '%s\n' configs/cshl2026/ktau*_delay*_uniform*.yaml \
-                                     configs/cshl2026/ktau*_delay*_vanilla*.yaml \
-                                     configs/cshl2026/ktau*_delay*_groups*.yaml | sort)
-N_SEEDS=30
+mapfile -t CONFIGS < <(printf '%s\n' configs/cshl2026/autocorr*_ktau*_delay*_normal*.yaml \
+                                     configs/cshl2026/autocorr*_ktau*_delay*_vanilla*.yaml \
+                                     configs/cshl2026/autocorr*_ktau*_delay*_groups*.yaml | sort)
+N_SEEDS=20
 OFFSET=${1:-0}
 
 CONFIG_IDX=$(( (SLURM_ARRAY_TASK_ID + OFFSET) / N_SEEDS ))
@@ -19,20 +19,20 @@ SEED=$(( (SLURM_ARRAY_TASK_ID + OFFSET) % N_SEEDS ))
 CONFIG=${CONFIGS[$CONFIG_IDX]}
 
 BASENAME=$(basename $CONFIG .yaml)
+AUTOCORR=$(echo $BASENAME | grep -oP 'autocorr\K[0-9]*\.?[0-9]+')
 KERNEL_TAU=$(echo $BASENAME | grep -oP 'ktau\K[0-9]*\.?[0-9]+')
 DELAY=$(echo $BASENAME      | grep -oP 'delay\K[0-9]*\.?[0-9]+')
-TAU_EFFECT=$(echo $BASENAME | grep -oP '(all|decay)$')
 
-if echo $BASENAME | grep -q 'uniform'; then
-    UNIFORM_TAU=$(echo $BASENAME | grep -oP 'uniform\K[0-9]*\.?[0-9]+')
-    NAME="ktau${KERNEL_TAU}_delay${DELAY}_uniform${UNIFORM_TAU}_${TAU_EFFECT}_seed${SEED}"
+if echo $BASENAME | grep -q 'normal'; then
+    ETA=$(echo $BASENAME | grep -oP 'eta\K[0-9]*\.?[0-9]+')
+    NAME="autocorr${AUTOCORR}_ktau${KERNEL_TAU}_delay${DELAY}_normal_eta${ETA}_seed${SEED}"
 elif echo $BASENAME | grep -q 'groups'; then
     GROUPS_TAU=$(echo $BASENAME | grep -oP 'groups\K[0-9]*\.?[0-9]+')
     PROP=$(echo $BASENAME       | grep -oP 'prop\K[0-9]*\.?[0-9]+')
-    NAME="ktau${KERNEL_TAU}_delay${DELAY}_groups${GROUPS_TAU}_prop${PROP}_${TAU_EFFECT}_seed${SEED}"
+    NAME="autocorr${AUTOCORR}_ktau${KERNEL_TAU}_delay${DELAY}_groups${GROUPS_TAU}_prop${PROP}_seed${SEED}"
 else
     VANILLA_TAU=$(echo $BASENAME | grep -oP 'vanilla\K[0-9]*\.?[0-9]+')
-    NAME="ktau${KERNEL_TAU}_delay${DELAY}_vanilla${VANILLA_TAU}_${TAU_EFFECT}_seed${SEED}"
+    NAME="autocorr${AUTOCORR}_ktau${KERNEL_TAU}_delay${DELAY}_vanilla${VANILLA_TAU}_seed${SEED}"
 fi
 
 mv logs/tmp_${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID}.out logs/${NAME}.out
