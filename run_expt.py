@@ -259,7 +259,7 @@ def main(config, seed, name, quick_test=False):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     generator = torch.Generator().manual_seed(seed)
  
-    savepath = os.path.join("rnn_results", f"{name}", "")
+    savepath = os.path.join("rnn_results2", f"{name}", "")
     os.makedirs(savepath, exist_ok=True)
  
     # Persist config alongside results for reproducibility

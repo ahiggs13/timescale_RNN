@@ -2,7 +2,7 @@
 
 .DS_Store
 
-rnn_results/
+rnn_results*/
 configs/
 logs/
 test.ipynb

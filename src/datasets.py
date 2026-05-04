@@ -383,6 +383,7 @@ class NonstationaryRewardDelayDataset(Dataset):
             inputs[t] = x
             current_output_bin = max(t + 1 - self.read_delay, 1)
             outputs[t] = self._exp_weighted_avg(inputs[:current_output_bin, 0].numpy(), self.kernel_tau, n=self.integration_window)
+            outputs = outputs*10 # scale up to make it more learnable
 
         return inputs, outputs
 
