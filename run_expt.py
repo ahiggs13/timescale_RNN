@@ -253,14 +253,14 @@ def build_model(conf, device):
 # Entry point
 # ---------------------------------------------------------------------------
 
-def main(config, seed, name, quick_test=False):
+def main(config, seed, name, output_dir, quick_test=False):
     with open(config, "r") as fh:
         conf = yaml.safe_load(fh)
  
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     generator = torch.Generator().manual_seed(seed)
  
-    savepath = os.path.join("rnn_results_debugging", f"{name}", "") # Change this for different runs, need to add a flag or something in the config to specify this
+    savepath = os.path.join(f"rnn_results",f"{output_dir}", f"{name}", "") 
     os.makedirs(savepath, exist_ok=True)
  
     # Persist config alongside results for reproducibility
@@ -300,4 +300,4 @@ if __name__ == "__main__":
     fire.Fire(main)
 
 # Usage:
-# python -u run_expt.py --config='configs/uniform.yaml' --seed=0 --name='whatever'
+# python -u run_expt.py --config='configs/uniform.yaml' --seed=0 --name='uniform' --output_dir='test'

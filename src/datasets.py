@@ -385,6 +385,8 @@ class NonstationaryRewardDelayDataset(Dataset):
             current_output_bin = max(t + 1 - self.read_delay, 1)
             outputs[t] = self._exp_weighted_avg(inputs[:current_output_bin, 0].numpy(), self.kernel_tau, n=self.integration_window)
 
+        outputs = torch.multiply(outputs, np.log(self.kernel_tau)/self.autocorr)
+
         # Zero integration case: inputs match convolved outputs, so task is just to learn delay
         if self.zero_integration == True:
             inputs = outputs.unsqueeze(1)
