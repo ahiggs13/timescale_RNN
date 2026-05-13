@@ -140,7 +140,8 @@ def load_dataset(conf, seed):
     if expt_type == "integration_task":
         return datasets.NonstationaryRewardDelayDataset(
             seed,
-            expt["kernel_tau"], expt["read_delay"], expt["autocorr"]
+            kernel_tau=expt["kernel_tau"], read_delay=expt["read_delay"], autocorr=expt["autocorr"],
+            noise_std=expt['noise_std'],  zero_integration=expt['zero_integration'],
         )
     
     if expt_type == 'delay_discrimination':
@@ -259,7 +260,7 @@ def main(config, seed, name, quick_test=False):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     generator = torch.Generator().manual_seed(seed)
  
-    savepath = os.path.join("rnn_results2", f"{name}", "")
+    savepath = os.path.join("rnn_results_debugging", f"{name}", "") # Change this for different runs, need to add a flag or something in the config to specify this
     os.makedirs(savepath, exist_ok=True)
  
     # Persist config alongside results for reproducibility

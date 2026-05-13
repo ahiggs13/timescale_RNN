@@ -340,7 +340,7 @@ class reviewTask(Dataset):
 
 class NonstationaryRewardDelayDataset(Dataset):
     def __init__(self, seed, kernel_tau, read_delay=3, cue_onset=3, integration_window=10,
-                 noise_mean=0.0, noise_std=1.0, autocorr=0.0, duration=20, dt=0.01, size=1000):
+                 noise_mean=0.0, noise_std=1.0, autocorr=0.0, duration=20, dt=0.01, size=1000, zero_integration=False):
         # General parameters
         self.seed = seed
         self.duration = duration
@@ -353,6 +353,7 @@ class NonstationaryRewardDelayDataset(Dataset):
         self.kernel_tau = int(kernel_tau / dt)
         self.integration_window = int(integration_window / self.dt)
         self.read_delay = int(read_delay / dt)
+        self.zero_integration = zero_integration
 
         # Noise parameters
         self.noise_mean = noise_mean
@@ -383,7 +384,10 @@ class NonstationaryRewardDelayDataset(Dataset):
             inputs[t] = x
             current_output_bin = max(t + 1 - self.read_delay, 1)
             outputs[t] = self._exp_weighted_avg(inputs[:current_output_bin, 0].numpy(), self.kernel_tau, n=self.integration_window)
-        outputs = torch.mul(outputs, 10) # scale up to make it more learnable
+
+        # Zero integration case: inputs match convolved outputs, so task is just to learn delay
+        if self.zero_integration == True:
+            inputs = outputs.unsqueeze(1)
 
         return inputs, outputs
 

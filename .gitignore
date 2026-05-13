@@ -2,6 +2,9 @@
 
 .DS_Store
 
+.vscode/
+
+swarm*
 rnn_results*/
 configs/
 logs/

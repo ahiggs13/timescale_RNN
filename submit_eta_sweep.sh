@@ -8,14 +8,12 @@
 
 source activate py312p9
 
-mapfile -t CONFIGS < <(printf '%s\n' configs/debugging/autocorr*_ktau*_delay*_normal*.yaml \
-                                     configs/debugging/autocorr*_ktau*_delay*_vanilla*.yaml \
-                                     configs/debugging/autocorr*_ktau*_delay*_groups*.yaml | sort)
-N_SEEDS=1
+mapfile -t CONFIGS < <(printf '%s\n' configs/eta_sweep/autocorr*_ktau*_delay*_normal*.yaml | sort)
+N_SEEDS=44
 OFFSET=${1:-0}
 
 CONFIG_IDX=$(( (SLURM_ARRAY_TASK_ID + OFFSET) / N_SEEDS ))
-SEED=$(( (SLURM_ARRAY_TASK_ID + OFFSET) % N_SEEDS + 20 )) # added 20 to run seeds 20-39 now
+SEED=$(( (SLURM_ARRAY_TASK_ID + OFFSET) % N_SEEDS)) 
 CONFIG=${CONFIGS[$CONFIG_IDX]}
 
 BASENAME=$(basename $CONFIG .yaml)
