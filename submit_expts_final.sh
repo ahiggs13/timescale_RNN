@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=rnn_train
 #SBATCH --mem=10g
-#SBATCH --time=72:00:00
+#SBATCH --time=120:00:00
 #SBATCH --array=0-999
 #SBATCH -o logs/tmp_%A_%a.out
 #SBATCH -e logs/tmp_%A_%a.err
@@ -56,4 +56,5 @@ python -u run_expt.py --config=$CONFIG --seed=$SEED --name=$NAME --output_dir=$D
 # sbatch submit_expts_final.sh --offset 0 --dir final
 # sbatch submit_expts_final.sh --offset 1000 --dir final
 # sbatch submit_expts_final.sh --offset 2000 --dir final
-# sbatch --array=0-599 submit_expts_final.sh --offset 3000 --dir final
+# sbatch --array=0-599 submit_expts_final.sh --offset 3000 --dir final 
+# i.e. for 3600 total jobs

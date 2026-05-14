@@ -243,6 +243,12 @@ def build_model(conf, device):
                 m["dt"], tau_array, tau_array, 1, m["activation"],
                 m["bias"], m["sigma_in"], m["sigma_re"],
             )
+        elif model_type =="expirimental_RNN_sigmainit":
+            model = models.expirimental_RNN_sigmainit(
+                m["input_size"], m["hidden_size"], m["output_size"],
+                m["dt"], tau_array, m["activation"], m["tau_effect"],
+                m["bias"], m["sigma_in"], m["sigma_re"], m["sigma"]
+            )
         else:
             raise ValueError(f"Unsupported model type: '{model_type}'.")
 
