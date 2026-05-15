@@ -254,9 +254,9 @@ class expirimental_RNN_sigmainit(nn.Module):
         self.ho = nn.Linear(hidden_size, output_size, bias=bias)
 
         with torch.no_grad():
-            self.hh.weight.copy_(torch.tensor(sigma*np.random.normal((hidden_size, hidden_size))))
-            self.ih.weight.copy_(torch.tensor(sigma*np.random.normal((hidden_size, input_size))))
-            self.ho.weight.copy_(torch.tensor(sigma*np.random.normal((hidden_size, output_size))))
+            self.hh.weight.copy_(torch.tensor(sigma*np.random.normal(loc=0, scale=1, size=(hidden_size, hidden_size))/np.sqrt(hidden_size)))
+            self.ih.weight.copy_(torch.tensor(sigma*np.random.normal(loc=0, scale=1, size=(hidden_size, input_size))/np.sqrt(hidden_size)))
+            self.ho.weight.copy_(torch.tensor(sigma*np.random.normal(loc=0, scale=1, size=(output_size, hidden_size))/np.sqrt(hidden_size)))
 
     def forward(self, inputs, hidden, noise=True):
         # inputs: (B, T, input_size)

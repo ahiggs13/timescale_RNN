@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=rnn_train
 #SBATCH --mem=10g
-#SBATCH --time=00:10:00
+#SBATCH --time=120:00:00
 #SBATCH --array=0-999
 #SBATCH -o logs/tmp_%A_%a.out
 #SBATCH -e logs/tmp_%A_%a.err
@@ -51,7 +51,7 @@ mv logs/tmp_${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID}.out logs/${DIR}/${NAME}
 mv logs/tmp_${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID}.err logs/${DIR}/${NAME}.err
 
 echo "Config: $CONFIG | Seed: $SEED | Name: $NAME"
-python -u run_expt.py --config=$CONFIG --seed=$SEED --name=$NAME --output_dir=$DIR --quick_test=True
+python -u run_expt.py --config=$CONFIG --seed=$SEED --name=$NAME --output_dir=$DIR
 
 # sbatch submit_expts_aidan.sh --offset 0 --dir aidan_sigma
 # sbatch submit_expts_aidan.sh --offset 1000 --dir aidan_sigma
